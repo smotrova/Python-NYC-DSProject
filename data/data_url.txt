@@ -1,0 +1,8 @@
+
+Download data only for relevant columns so that the data volume is manageable. These are the recommended fields: created_date,unique_key,complaint_type, incident_zip, incident_address,street_name,address_type, city, resolution_description, borough, latitude, longitude, closed_date, location_type,status
+
+
+https://data.cityofnewyork.us/resource/fhrw-4uyv.csv?$limit=100000000&Agency=HPD&$select=created_date,unique_key,complaint_type,incident_zip,incident_address,street_name,address_type,city,resolution_description,borough,latitude,longitude,closed_date,location_type,status
+
+
+Download data and save as ./data/fhrw-4uyv.csv
