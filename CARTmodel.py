@@ -1,4 +1,4 @@
-''' Model to predict a number of complaints'''
+''' CART Model to predict a number of complaints in a month across a borough'''
  
 # =============================================================================
 # `heat/hot water` complaints 
@@ -11,44 +11,44 @@ import matplotlib.pyplot as plt
 hhw = pd.read_csv('./results/nyc_hhw_complaints.csv', 
                   parse_dates = ['created_date'])
 
-hhw.groupby(['borough',
-            'incident_zip',
-            'incident_address'])['complaints'].sum().sort_values(ascending=False)
-
-hhw['day'] = hhw.created_date.dt.day
 hhw['month'] = hhw.created_date.dt.month
 hhw['year'] = hhw.created_date.dt.year
 
 # =============================================================================
-# Train, tets data sets to predict a number of complaints based on
-# borough, incident_zip, day of month and month
+# Train, tets data sets to predict an average number of complaints 
+# in a month across borough
 # =============================================================================
 
-from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import LabelBinarizer
 from sklearn_pandas import DataFrameMapper
+from sklearn.tree import DecisionTreeRegressor
+
 
 Train = hhw.loc[hhw.created_date<'2019-01-01']
 Test = hhw.loc[hhw.created_date>='2019-01-01']
 
-Train = Train.groupby(['borough', 'incident_zip',
-                       'month', 'year'])['complaints'].sum().reset_index()
+Train = Train.groupby(['borough', 'year',
+                       'month'])['complaints'].sum().reset_index()
 
-Test = Test.groupby(['borough', 'incident_zip',
-                     'month', 'year'])['complaints'].sum().reset_index()
+Train = Train.groupby(['borough', 'month'])['complaints'].mean().reset_index()
 
-X_train = Train[['borough', 'incident_zip', 'month', 'year']]
+
+Test = Test.groupby(['borough','year',
+                     'month'])['complaints'].sum().reset_index()
+
+Test = Test.groupby(['borough', 'month'])['complaints'].mean().reset_index()
+
+
+X_train = Train[['borough', 'month']]
 y_train = Train['complaints']
 
-X_test = Test[['borough', 'incident_zip', 'month', 'year']]
+X_test = Test[['borough','month']]
 y_test = Test['complaints']
 
 # Features 
 # convert the categorical varibale to binary variables
 mapper = DataFrameMapper([
-    ('incident_zip', None),
     ('month', None),
-    ('year', None),
     ('borough', LabelBinarizer())
 ], df_out=True)
 
@@ -56,18 +56,18 @@ mapper = DataFrameMapper([
 Z_train = mapper.fit_transform(X_train)
 Z_test = mapper.transform(X_test)
 
-model = LinearRegression(normalize=True)
-model.fit(Z_train, y_train)
-model.score(Z_train, y_train)
+CARTmodel = DecisionTreeRegressor()
+CARTmodel.fit(Z_train,y_train)
+CARTmodel.score(Z_train, y_train)
 
-y_pred = model.predict(Z_test)
+y_pred = CARTmodel.predict(Z_test)
 
 RSS = ((y_test-y_pred)**2).sum()
 TSS = ((y_train.mean()-y_test)**2).sum()
 
 R2 = 1.0 - RSS/TSS
 
-print("Model performance R^2 = {}".format(R2))
+print("Model performance on test data R^2 = {}".format(R2))
     
 print("Baseline model prediction {}".format(y_train.mean()))
 print("RSS = {}".format(RSS))
@@ -86,7 +86,7 @@ sns.distplot(y_pred, hist=False, color="b", label="Fitted Values" )
 sns.distplot(y_test, hist=False, color="r", label="Actual Value")
 plt.title("Distribution Plot")
 
-plt.savefig('./figs/y_pred_distribition.pdf')
+plt.savefig('./figs/y_pred_tree_distribition.pdf')
 plt.show()
 plt.close()
 
@@ -96,11 +96,36 @@ plt.close()
 import pickle
 
 # save model
-with open('./results/model.pkl', 'wb') as f:
+with open('./results/CARTmodel.pkl', 'wb') as f:
     pickle.dump(model, f)
 
 # =============================================================================
 # load a model    
-# with open('.results/model.pkl', 'rb') as f:
+# with open('.results/CARTmodel.pkl', 'rb') as f:
 #     pipe = pickle.load(f)
+# =============================================================================
+
+# =============================================================================
+# Plot the tree
+# =============================================================================
+
+# =============================================================================
+# import graphviz
+# import pydotplus
+# from sklearn.tree import export_graphviz, plot_tree
+# from IPython.display import Image  
+# import os
+# 
+# #Tell Python where the graphviz package is load; then load it.
+# os.environ["PATH"] += os.pathsep + 'C:\\Users\\Olena\\Miniconda3\\pkgs\\graphviz-2.38-hfd603c8_2\\Library\\bin\\graphviz'
+# 
+# dot_data = export_graphviz(CARTmodel, out_file=None, 
+#                                 feature_names=Z_train.columns,  
+#                                 class_names=y_train.unique()) #, rotate=True)
+# # Draw graph
+# graph = pydotplus.graph_from_dot_data(dot_data)  
+# 
+# # Show graph
+# Image(graph.create_png())
+# 
 # =============================================================================
