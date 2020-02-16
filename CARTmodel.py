@@ -56,7 +56,7 @@ mapper = DataFrameMapper([
 Z_train = mapper.fit_transform(X_train)
 Z_test = mapper.transform(X_test)
 
-CARTmodel = DecisionTreeRegressor()
+CARTmodel = DecisionTreeRegressor(max_depth=5)
 CARTmodel.fit(Z_train,y_train)
 CARTmodel.score(Z_train, y_train)
 
